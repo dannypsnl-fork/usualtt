@@ -34,6 +34,7 @@ and check : ctx -> Tm.tm -> Tm.ty -> unit =
 and conv : Tm.ty -> Tm.ty -> bool =
   fun t1 t2 ->
   match (t1, t2) with
+  | (TVar x1, TVar x2) -> x1 == x2
   | (Arrow (a1, b1), Arrow (a2, b2)) -> conv a1 a2 && conv b1 b2
   | (List a1, List a2) -> conv a1 a2
   | (Bool, Bool) -> true
