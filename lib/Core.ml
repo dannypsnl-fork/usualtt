@@ -38,6 +38,8 @@ and conv : ty -> ty -> bool =
   fun t1 t2 ->
   match (t1, t2) with
   | (TVar x1, TVar x2) -> String.equal x1 x2
+  | (TVar _x, _t) -> true
+  | (_t, TVar _x) -> true
   | (Arrow (a1, b1), Arrow (a2, b2)) -> conv a1 a2 && conv b1 b2
   | (List a1, List a2) -> conv a1 a2
   | (Bool, Bool) -> true
