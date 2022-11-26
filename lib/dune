@@ -1,2 +1,7 @@
+(ocamllex Lexer)
+
+(menhir
+ (modules Parser))
+
 (library
  (name usualtt))

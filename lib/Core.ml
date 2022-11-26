@@ -1,17 +1,15 @@
-exception TODO
-
 exception InferLambda
 exception NoVar
 exception BadApp
 exception TypeMismatched
 
-module Tm = Term
+open Term
 
 type ctx =
   | Emp
-  | Extend of Tm.var * Tm.ty * ctx
+  | Extend of var * ty * ctx
 
-let rec infer : ctx -> Tm.tm -> Tm.ty =
+let rec infer : ctx -> term -> ty =
    fun ctx term ->
     match term with
     | Var x  -> lookup ctx x
@@ -23,7 +21,9 @@ let rec infer : ctx -> Tm.tm -> Tm.ty =
     | Let (x, a, t, u) ->
       check ctx t a;
       infer (extend ctx x a) u
-and check : ctx -> Tm.tm -> Tm.ty -> unit =
+    | Int _ -> Int
+    | Bool _ -> Bool
+and check : ctx -> term -> ty -> unit =
     fun ctx t a ->
       match (t, a) with
       | (Lam (x, t), Arrow (a, b)) -> check (extend ctx x a) t b
@@ -31,7 +31,7 @@ and check : ctx -> Tm.tm -> Tm.ty -> unit =
         check ctx t a;
         check (extend ctx x a) u ty
       | _ -> if conv (infer ctx t) a then () else raise TypeMismatched
-and conv : Tm.ty -> Tm.ty -> bool =
+and conv : ty -> ty -> bool =
   fun t1 t2 ->
   match (t1, t2) with
   | (TVar x1, TVar x2) -> x1 == x2
@@ -40,9 +40,9 @@ and conv : Tm.ty -> Tm.ty -> bool =
   | (Bool, Bool) -> true
   | (Int, Int) -> true
   | _ -> false
-and extend : ctx -> Tm.var -> Tm.ty -> ctx = fun ctx x ty -> Extend (x, ty, ctx)
-and lookup : ctx -> Tm.var -> Tm.ty =
+and extend : ctx -> var -> ty -> ctx = fun ctx x ty -> Extend (x, ty, ctx)
+and lookup : ctx -> var -> ty =
   fun ctx x ->
   match ctx with
-  | Emp -> raise NoVar
   | Extend (x', ty, ctx') -> if x == x' then ty else lookup ctx' x
+  | Emp -> raise NoVar
