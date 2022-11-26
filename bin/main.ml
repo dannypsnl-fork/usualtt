@@ -19,6 +19,11 @@ and column pos = pos.pos_cnum - pos.pos_bol - 1
 let parse_program source = parse' P.program source
 
 let () =
+  Printexc.register_printer (function
+  | TypeMismatch (t1, t2) ->
+    Some (Printf.sprintf "`%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
+  | _ -> None);
+
   print_string "usualtt";
   print_newline ();
   let file_name = Array.get Sys.argv 1 in

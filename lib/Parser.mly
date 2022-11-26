@@ -49,4 +49,5 @@ term:
 typ:
   | TINT { Int }
   | TBOOL { Bool }
+  | v=IDENTIFIER { TVar v }
   | t1=typ ARROW t2=typ { Arrow (t1, t2) }
