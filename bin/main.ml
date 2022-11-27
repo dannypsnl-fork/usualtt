@@ -24,6 +24,8 @@ let () =
     Some (Printf.sprintf "type mismatched: `%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
   | InferLambda tm ->
     Some (Printf.sprintf "tries to infer lambda: `%s`" (string_of_term tm))
+  | BadApp ty ->
+    Some (Printf.sprintf "try apply: `%s`" (string_of_ty ty))
   | _ -> None);
 
   print_string "usualtt";

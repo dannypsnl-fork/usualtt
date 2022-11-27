@@ -1,7 +1,7 @@
 open Term
 
 exception InferLambda of term
-exception BadApp
+exception BadApp of ty
 exception BadType
 exception BadLift
 exception NoVar of var
@@ -21,13 +21,17 @@ let rec infer : env -> ctx -> term -> ty_val =
       | Some t -> t
       | None -> raise (NoVar x)
     end
-  | App (t , u) ->
+  | App (t, u) ->
     begin
       match infer env ctx t with
       | TArrow (a, b) ->
         check env ctx u a;
         b
-      | _ -> raise BadApp
+      | TLam (v, tlam) ->
+        let a = (tlam (TVar v))
+        in check env ctx t a;
+           infer env ctx u
+      | ty -> raise (BadApp (quote env ty))
     end
   | Lam _ -> raise (InferLambda term)
   | Let (x, a, t, u) ->
@@ -39,6 +43,7 @@ let rec infer : env -> ctx -> term -> ty_val =
 and check : env -> ctx -> term -> ty_val -> unit =
   fun env ctx t a ->
   match (t, a) with
+  | (Lam _, TLam (v, tlam)) -> check env ctx t (tlam (TVar v))
   | (Lam (x, t), TArrow (a, b)) -> check env (extend ctx x a) t b
   | (Let (x, a, t, u), ty) ->
     let a' = (eval env a)
@@ -54,7 +59,10 @@ and eval : env -> ty -> ty_val =
   | Bool -> TVar "Bool"
   | Int -> TVar "Int"
   | TSchema (v, ty) -> TLam (v, (fun u -> eval (extend env v u) ty))
-  | TVar x -> TVar x
+  | TVar x ->
+    match lookup env x with
+    | None -> raise (NoVar x)
+    | Some t -> t
 and top_lift : ty -> ty = fun ty -> lift (to_lift ty) ty
 and lift : var list -> ty -> ty =
   fun vs ty ->
@@ -91,6 +99,6 @@ and quote : env -> ty_val -> ty =
   | TVar "Bool" -> Bool
   | TVar "Int" -> Int
   | TVar x -> TVar x
-  | TLam (x, t) -> List (quote (extend env x (TVar x)) (t (TVar x)))
+  | TLam (x, t) -> quote (extend env x (TVar x)) (t (TVar x))
   | TArrow (a, b) -> Arrow ((quote env a), (quote env b))
   | TApp (a, b) -> Arrow ((quote env a), (quote env b))

@@ -48,7 +48,7 @@ and string_of_ty : ty -> string =
     match ty with
     | Bool -> "Bool"
     | Int -> "Int"
-    | List a -> "List" ^ string_of_ty a
+    | List a -> "List<" ^ string_of_ty a ^ ">"
     | Arrow (a, b) -> string_of_ty a ^ " -> " ^ string_of_ty b
     | TVar x -> "?" ^ x
     | _ -> raise BadQuote
