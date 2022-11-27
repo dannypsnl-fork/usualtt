@@ -20,6 +20,7 @@ let parse_program source = parse' P.program source
 
 let () =
   Printexc.register_printer (function
+  | NoVar x -> Some (Printf.sprintf "no variable found: `%s`" x)
   | TypeMismatch (t1, t2) ->
     Some (Printf.sprintf "type mismatched: `%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
   | InferLambda tm ->

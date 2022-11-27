@@ -15,7 +15,31 @@ type env = ctx
 let cons_uniq xs x = if List.mem x xs then xs else x :: xs
 let remove_from_left xs = List.rev (List.fold_left cons_uniq [] xs)
 
-let rec infer : env -> ctx -> term -> ty_val =
+let rec top_lift : ty -> ty = fun ty -> lift (remove_from_left (to_lift ty)) ty
+and lift : var list -> ty -> ty =
+  fun vs ty ->
+  match vs with
+  | [] -> ty
+  | v :: vs -> TSchema (v, (lift vs ty))
+and to_lift : ty -> var list =
+  fun ty ->
+  match ty with
+  | Bool -> []
+  | Int -> []
+  | List a -> to_lift a
+  | Arrow (a, b) -> List.append (to_lift a) (to_lift b)
+  | TVar x -> [x]
+  | _ -> raise BadLift
+
+let rec top_infer : env -> ctx -> term -> ty_val =
+  fun env ctx term ->
+  match term with
+  | Let (x, a, t, u) ->
+    let a' = (eval env (top_lift a))
+    in check env ctx t a';
+    infer env (extend ctx x a') u
+  | term -> infer env ctx term
+and infer : env -> ctx -> term -> ty_val =
   fun env ctx term ->
   match term with
   | Var x -> 
@@ -38,7 +62,7 @@ let rec infer : env -> ctx -> term -> ty_val =
     end
   | Lam _ -> raise (InferLambda term)
   | Let (x, a, t, u) ->
-    let a' = (eval env (top_lift a))
+    let a' = (eval env a)
     in check env ctx t a';
     infer env (extend ctx x a') u
   | Int _ -> eval env Int
@@ -65,23 +89,8 @@ and eval : env -> ty -> ty_val =
   | TSchema (v, ty) -> TLam (v, (fun u -> eval (extend env v u) ty))
   | TVar x ->
     match lookup env x with
-    | None -> raise (NoVar x)
+    | None -> TVar x
     | Some t -> t
-and top_lift : ty -> ty = fun ty -> lift (remove_from_left (to_lift ty)) ty
-and lift : var list -> ty -> ty =
-  fun vs ty ->
-  match vs with
-  | [] -> ty
-  | v :: vs -> TSchema (v, (lift vs ty))
-and to_lift : ty -> var list =
-  fun ty ->
-  match ty with
-  | Bool -> []
-  | Int -> []
-  | List a -> to_lift a
-  | Arrow (a, b) -> List.append (to_lift a) (to_lift b)
-  | TVar x -> [x]
-  | _ -> raise BadLift
 and conv : env -> ty_val -> ty_val -> bool =
   fun env t1 t2 ->
   match (t1, t2) with
