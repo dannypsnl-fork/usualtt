@@ -1,3 +1,4 @@
+exception BadQuote
 
 type var = string
 
@@ -11,13 +12,14 @@ type ty =
   | Arrow of ty * ty
   (* type variable *)
   | TVar of var
+  (* type schema *)
+  | TSchema of var * ty
 
 type ty_val =
   | TVar of var
   | TLam of var * (ty_val -> ty_val)
   | TArrow of ty_val * ty_val
   | TApp of ty_val * ty_val
-  | TKind
 
 type term =
   (* constant *)
@@ -49,6 +51,7 @@ and string_of_ty : ty -> string =
     | List a -> "List" ^ string_of_ty a
     | Arrow (a, b) -> string_of_ty a ^ " -> " ^ string_of_ty b
     | TVar x -> "?" ^ x
+    | _ -> raise BadQuote
 and print_term : term -> unit =
   fun tm -> print_string (string_of_term tm)
 and print_ty : ty -> unit =

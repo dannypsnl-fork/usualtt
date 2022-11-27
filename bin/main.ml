@@ -22,6 +22,8 @@ let () =
   Printexc.register_printer (function
   | TypeMismatch (t1, t2) ->
     Some (Printf.sprintf "type mismatched: `%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
+  | InferLambda tm ->
+    Some (Printf.sprintf "tries to infer lambda: `%s`" (string_of_term tm))
   | _ -> None);
 
   print_string "usualtt";
