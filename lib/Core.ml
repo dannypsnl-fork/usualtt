@@ -12,6 +12,9 @@ type ctx =
   | Extend of var * ty_val * ctx
 type env = ctx
 
+let cons_uniq xs x = if List.mem x xs then xs else x :: xs
+let remove_from_left xs = List.rev (List.fold_left cons_uniq [] xs)
+
 let rec infer : env -> ctx -> term -> ty_val =
   fun env ctx term ->
   match term with
@@ -49,8 +52,9 @@ and check : env -> ctx -> term -> ty_val -> unit =
     let a' = (eval env a)
     in check env ctx t a';
     check env (extend ctx x a') u ty
-  | _ -> let ty = infer env ctx t
-         in if conv env ty a then () else raise (TypeMismatch (quote env ty, quote env a))
+  | _ ->
+    let ty = infer env ctx t
+    in if conv env ty a then () else raise (TypeMismatch (quote env ty, quote env a))
 and eval : env -> ty -> ty_val =
   fun env ty ->
   match ty with
@@ -63,7 +67,7 @@ and eval : env -> ty -> ty_val =
     match lookup env x with
     | None -> raise (NoVar x)
     | Some t -> t
-and top_lift : ty -> ty = fun ty -> lift (to_lift ty) ty
+and top_lift : ty -> ty = fun ty -> lift (remove_from_left (to_lift ty)) ty
 and lift : var list -> ty -> ty =
   fun vs ty ->
   match vs with
@@ -99,6 +103,6 @@ and quote : env -> ty_val -> ty =
   | TVar "Bool" -> Bool
   | TVar "Int" -> Int
   | TVar x -> TVar x
-  | TLam (x, t) -> quote (extend env x (TVar x)) (t (TVar x))
+  | TLam (x, t) -> TSchema (x, quote (extend env x (TVar x)) (t (TVar x)))
   | TArrow (a, b) -> Arrow ((quote env a), (quote env b))
   | TApp (a, b) -> Arrow ((quote env a), (quote env b))

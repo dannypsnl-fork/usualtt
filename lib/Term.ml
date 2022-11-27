@@ -51,7 +51,7 @@ and string_of_ty : ty -> string =
     | List a -> "List<" ^ string_of_ty a ^ ">"
     | Arrow (a, b) -> string_of_ty a ^ " -> " ^ string_of_ty b
     | TVar x -> "?" ^ x
-    | _ -> raise BadQuote
+    | TSchema (v, t) -> "∀" ^ v ^ "." ^ string_of_ty t
 and print_term : term -> unit =
   fun tm -> print_string (string_of_term tm)
 and print_ty : ty -> unit =
