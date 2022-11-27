@@ -21,7 +21,7 @@ let parse_program source = parse' P.program source
 let () =
   Printexc.register_printer (function
   | TypeMismatch (t1, t2) ->
-    Some (Printf.sprintf "`%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
+    Some (Printf.sprintf "type mismatched: `%s` not equals to `%s`" (string_of_ty t1) (string_of_ty t2))
   | _ -> None);
 
   print_string "usualtt";
@@ -32,7 +32,7 @@ let () =
   (* parsing *)
   let term = parse_program in_chan in
   (* check type *)
-  let inferred_ty = infer Emp term
+  let inferred_ty = quote Emp (infer Emp Emp term)
   in print_string "term:\n\n";
      print_term term;
      print_string "\n\nhas type:\n\n";

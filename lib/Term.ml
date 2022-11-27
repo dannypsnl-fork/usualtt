@@ -12,6 +12,13 @@ type ty =
   (* type variable *)
   | TVar of var
 
+type ty_val =
+  | TVar of var
+  | TLam of var * (ty_val -> ty_val)
+  | TArrow of ty_val * ty_val
+  | TApp of ty_val * ty_val
+  | TKind
+
 type term =
   (* constant *)
   | Int of int

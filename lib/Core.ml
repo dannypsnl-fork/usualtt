@@ -1,53 +1,84 @@
 open Term
 
-type ctx =
-  | Emp
-  | Extend of var * ty * ctx
-
 exception InferLambda
 exception BadApp
+exception BadType
+exception BadQuote
 exception NoVar of var
 exception TypeMismatch of ty * ty
 
-let rec infer : ctx -> term -> ty =
-   fun ctx term ->
-    match term with
-    | Var x -> lookup ctx x
-    | App (t , u) ->
-      begin
-      match infer ctx t with
-        | Arrow (a, b) -> check ctx u a; b
-        | _ -> raise BadApp
-      end
-    | Lam _ -> raise InferLambda
-    | Let (x, a, t, u) ->
-      check ctx t a;
-      infer (extend ctx x a) u
-    | Int _ -> Int
-    | Bool _ -> Bool
-and check : ctx -> term -> ty -> unit =
-    fun ctx t a ->
-      match (t, a) with
-      | (Lam (x, t), Arrow (a, b)) -> check (extend ctx x a) t b
-      | (Let (x, a, t, u), ty) ->
-        check ctx t a;
-        check (extend ctx x a) u ty
-      | _ -> let ty = infer ctx t
-             in if conv ty a then () else raise (TypeMismatch (ty, a))
-and conv : ty -> ty -> bool =
-  fun t1 t2 ->
+type ctx =
+  | Emp
+  | Extend of var * ty_val * ctx
+type env = ctx
+
+let rec infer : env -> ctx -> term -> ty_val =
+  fun env ctx term ->
+  match term with
+  | Var x -> 
+    begin
+    match lookup ctx x with
+    | Some t -> t
+    | None -> raise (NoVar x)
+    end
+  | App (t , u) ->
+    begin
+    match infer env ctx t with
+      | TArrow (a, b) ->
+        check env ctx u a;
+        b
+      | _ -> raise BadApp
+    end
+  | Lam _ -> raise InferLambda
+  | Let (x, a, t, u) ->
+    let a' = (eval env a)
+    in check env ctx t a';
+    infer env (extend ctx x a') u
+  | Int _ -> eval env Int
+  | Bool _ -> eval env Bool
+and check : env -> ctx -> term -> ty_val -> unit =
+  fun env ctx t a ->
+  match (t, a) with
+  | (Lam (x, t), TArrow (a, b)) -> check env (extend ctx x a) t b
+  | (Let (x, a, t, u), ty) ->
+    let a' = (eval env a)
+    in check env ctx t a';
+    check env (extend ctx x a') u ty
+  | _ -> let ty = infer env ctx t
+         in if conv env ty a then () else raise (TypeMismatch (quote env ty, quote env a))
+and eval : env -> ty -> ty_val =
+  fun env ty ->
+  match ty with
+  | List (TVar x) -> TLam (x, (fun u -> eval (extend env x u) (List (TVar x))))
+  | Arrow (a, b) -> TArrow ((eval env a), (eval env b))
+  | TVar var -> TVar var
+  | Bool -> TVar "Bool"
+  | Int -> TVar "Int"
+  | _ -> raise BadType
+and conv : env -> ty_val -> ty_val -> bool =
+  fun env t1 t2 ->
   match (t1, t2) with
   | (TVar x1, TVar x2) -> String.equal x1 x2
-  | (TVar _x, _t) -> true
-  | (_t, TVar _x) -> true
-  | (Arrow (a1, b1), Arrow (a2, b2)) -> conv a1 a2 && conv b1 b2
-  | (List a1, List a2) -> conv a1 a2
-  | (Bool, Bool) -> true
-  | (Int, Int) -> true
+  | (TLam (x, t), TLam (_, t')) ->  conv (extend env x (TVar x)) (t (TVar x)) (t' (TVar x))
+  | (TLam (x, t), u) ->  conv (extend env x (TVar x)) (t (TVar x)) (TApp (u, (TVar x)))
+  | (u, TLam (x, t)) ->  conv (extend env x (TVar x)) (TApp (u, (TVar x))) (t (TVar x))
+  | (TArrow (a1, b1), TArrow (a2, b2)) -> conv env a1 a2 && conv env b1 b2
+  | (TApp (a1, b1), TApp (a2, b2)) -> conv env a1 a2 && conv env b1 b2
+  | (TKind, TKind) -> true
   | _ -> false
-and extend : ctx -> var -> ty -> ctx = fun ctx x ty -> Extend (x, ty, ctx)
-and lookup : ctx -> var -> ty =
+and extend : ctx -> var -> ty_val -> ctx = fun ctx x ty -> Extend (x, ty, ctx)
+and lookup : ctx -> var -> ty_val option =
   fun ctx x ->
   match ctx with
-  | Extend (x', ty, ctx') -> if String.equal x x' then ty else lookup ctx' x
-  | Emp -> raise (NoVar x)
+  | Extend (x', ty, ctx') -> if String.equal x x' then Some ty else lookup ctx' x
+  | Emp -> None
+and quote : env -> ty_val -> ty =
+  fun env v ->
+  match v with
+  | TVar "Bool" -> Bool
+  | TVar "Int" -> Int
+  | TVar x -> TVar x
+  | TLam (x, t) -> List (quote (extend env x (TVar x)) (t (TVar x)))
+  | TArrow (a, b) -> Arrow ((quote env a), (quote env b))
+  | TApp (a, b) -> Arrow ((quote env a), (quote env b))
+  | _ -> raise BadQuote
