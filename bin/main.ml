@@ -27,6 +27,7 @@ let () =
     Some (Printf.sprintf "tries to infer lambda: `%s`" (string_of_term tm))
   | BadApp ty ->
     Some (Printf.sprintf "try apply: `%s`" (string_of_ty ty))
+  | BadLift -> Some "internal bug, it shouldn't have any way to create type schema from code to let you lifting it"
   | _ -> None);
 
   print_string "usualtt";
