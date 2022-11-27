@@ -38,7 +38,7 @@ let () =
   (* parsing *)
   let term = parse_program in_chan in
   (* check type *)
-  let inferred_ty = quote Emp (infer Emp Emp term)
+  let inferred_ty = quote [] (infer [] [] term)
   in print_string "term:\n\n";
      print_term term;
      print_string "\n\nhas type:\n\n";

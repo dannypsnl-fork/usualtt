@@ -7,10 +7,11 @@ exception BadLift
 exception NoVar of var
 exception TypeMismatch of ty * ty
 
-type ctx =
-  | Emp
-  | Extend of var * ty_val * ctx
+type ctx = (var * ty_val) list
 type env = ctx
+
+let extend : ctx -> var -> ty_val -> ctx = fun ctx x ty -> (x, ty) :: ctx
+and lookup : ctx -> var -> ty_val option = fun ctx x -> List.assoc_opt x ctx
 
 let cons_uniq xs x = if List.mem x xs then xs else x :: xs
 let remove_from_left xs = List.rev (List.fold_left cons_uniq [] xs)
@@ -100,12 +101,6 @@ and conv : env -> ty_val -> ty_val -> bool =
   | (u, TLam (x, t)) ->  conv (extend env x (TVar x)) (TApp (u, (TVar x))) (t (TVar x))
   | (TArrow (a1, b1), TArrow (a2, b2)) -> conv env a1 a2 && conv env b1 b2
   | _ -> false
-and extend : ctx -> var -> ty_val -> ctx = fun ctx x ty -> Extend (x, ty, ctx)
-and lookup : ctx -> var -> ty_val option =
-  fun ctx x ->
-  match ctx with
-  | Extend (x', ty, ctx') -> if String.equal x x' then Some ty else lookup ctx' x
-  | Emp -> None
 and quote : env -> ty_val -> ty =
   fun env v ->
   match v with
